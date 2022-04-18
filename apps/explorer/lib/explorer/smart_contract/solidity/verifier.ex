@@ -164,7 +164,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
   end
 
   defp compare_bytecodes(
-         %{"abi" => abi, "bytecode" => bytecode},
+         %{"abi" => abi, "bytecode" => bytecode, "deployedBytecode" => deployed_bytecode},
          address_hash,
          arguments_data,
          autodetect_constructor_arguments,
@@ -173,7 +173,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
        ),
        do:
          compare_bytecodes(
-           {:ok, %{"abi" => abi, "bytecode" => bytecode}},
+           {:ok, %{"abi" => abi, "bytecode" => bytecode, "deployedBytecode" => deployed_bytecode}},
            address_hash,
            arguments_data,
            autodetect_constructor_arguments,
@@ -181,15 +181,88 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
            contract_name
          )
 
-  # credo:disable-for-next-line /Complexity/
   defp compare_bytecodes(
-         {:ok, %{"abi" => abi, "bytecode" => bytecode}},
+         {:ok, %{"abi" => abi, "bytecode" => bytecode, "deployedBytecode" => deployed_bytecode}},
          address_hash,
-         arguments_data,
-         autodetect_constructor_arguments,
-         contract_source_code,
-         contract_name
+         _arguments_data,
+         _autodetect_constructor_arguments,
+         _contract_source_code,
+         _contract_name
        ) do
+    {local_meta, local_meta_length} = extract_meta_from_deployed_bytecode(deployed_bytecode)
+
+    solc_local = decode_meta(local_meta)["solc"]
+
+    local_bytecode_without_meta =
+      bytecode
+      |> String.replace(local_meta <> local_meta_length, "")
+      |> String.replace("0x", "")
+
+    bc_deployed_bytecode = Chain.smart_contract_bytecode(address_hash)
+
+    {bc_meta, bc_meta_length} = extract_meta_from_deployed_bytecode(bc_deployed_bytecode)
+
+    solc_bc = decode_meta(bc_meta)["solc"]
+
+    blockchain_created_tx_input_without_meta =
+      case Chain.smart_contract_creation_tx_bytecode(address_hash) do
+        %{init: init, created_contract_code: _created_contract_code} ->
+          "0x" <> init_without_0x = init
+          init_without_0x |> String.replace(bc_meta <> bc_meta_length, "")
+
+        _ ->
+          ""
+      end
+
+    bc_replaced_local = String.replace(blockchain_created_tx_input_without_meta, local_bytecode_without_meta, "")
+
+    cond do
+      solc_local != solc_bc ->
+        {:error, :compiler_version}
+
+      !String.contains?(blockchain_created_tx_input_without_meta, local_bytecode_without_meta) ->
+        {:error, :generated_bytecode}
+
+      bc_replaced_local == "" ->
+        {:ok, %{abi: abi}}
+
+      true ->
+        {:ok, %{abi: abi, constructor_arguments: bc_replaced_local}}
+    end
+  end
+
+  defp extract_meta_from_deployed_bytecode(code_unknown_case) do
+    with true <- is_binary(code_unknown_case),
+         code <- String.downcase(code_unknown_case),
+         last_2_bytes <- code |> String.slice(-4..-1),
+         {meta_length, ""} <- last_2_bytes |> Integer.parse(16),
+         meta <- String.slice(code, (-(meta_length + 2) * 2)..-5) do
+      {meta, last_2_bytes}
+    else
+      _ ->
+        {"", ""}
+    end
+  end
+
+  defp decode_meta(meta) do
+    with {:ok, meta_raw_binary} <- Base.decode16(meta, case: :lower),
+         {:ok, decoded_meta, _remain} <- CBOR.decode(meta_raw_binary) do
+      decoded_meta
+    else
+      _ ->
+        %{}
+    end
+  end
+
+  # credo:disable-for-next-line /Complexity/
+  def compare_bytecodes_(
+        {:ok, %{"abi" => abi, "bytecode" => bytecode}},
+        address_hash,
+        arguments_data,
+        autodetect_constructor_arguments,
+        contract_source_code,
+        contract_name
+      ) do
     %{
       "metadata_hash" => _generated_metadata_hash,
       "bytecode" => generated_bytecode,
