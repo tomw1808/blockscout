@@ -210,13 +210,18 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       case Chain.smart_contract_creation_tx_bytecode(address_hash) do
         %{init: init, created_contract_code: _created_contract_code} ->
           "0x" <> init_without_0x = init
-          init_without_0x |> String.reverse() |> String.replace(String.reverse(bc_meta <> bc_meta_length), "", global: false) |> String.reverse()
+
+          init_without_0x
+          |> String.reverse()
+          |> String.replace(String.reverse(bc_meta <> bc_meta_length), "", global: false)
+          |> String.reverse()
 
         _ ->
           ""
       end
 
-    bc_replaced_local = String.replace(blockchain_created_tx_input_without_meta, local_bytecode_without_meta, "", global: false)
+    bc_replaced_local =
+      String.replace(blockchain_created_tx_input_without_meta, local_bytecode_without_meta, "", global: false)
 
     cond do
       solc_local != solc_bc ->
