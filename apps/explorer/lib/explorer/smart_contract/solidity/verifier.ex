@@ -20,6 +20,8 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
   @experimental "6c6578706572696d656e74616cf5"
   @metadata_hash_common_suffix "64736f6c63"
 
+  @bytecode_end_marker "/*END_OF_CODE*/"
+
   def evaluate_authenticity(_, %{"name" => ""}), do: {:error, :name}
 
   def evaluate_authenticity(_, %{"contract_source_code" => ""}),
@@ -195,8 +197,10 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
 
     local_bytecode_without_meta =
       bytecode
-      |> String.replace(local_meta <> local_meta_length, "")
-      |> String.replace("0x", "")
+      |> String.replace("0x", "", global: false)
+      |> String.reverse()
+      |> String.replace(String.reverse(local_meta <> local_meta_length), @bytecode_end_marker, global: false)
+      |> String.reverse()
 
     bc_deployed_bytecode = Chain.smart_contract_bytecode(address_hash)
 
@@ -208,13 +212,13 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       case Chain.smart_contract_creation_tx_bytecode(address_hash) do
         %{init: init, created_contract_code: _created_contract_code} ->
           "0x" <> init_without_0x = init
-          init_without_0x |> String.replace(bc_meta <> bc_meta_length, "")
+          init_without_0x |> String.reverse() |> String.replace(String.reverse(bc_meta <> bc_meta_length), @bytecode_end_marker, global: false) |> String.reverse()
 
         _ ->
           ""
       end
 
-    bc_replaced_local = String.replace(blockchain_created_tx_input_without_meta, local_bytecode_without_meta, "")
+    bc_replaced_local = String.replace(blockchain_created_tx_input_without_meta, local_bytecode_without_meta, "", global: false)
 
     cond do
       solc_local != solc_bc ->
