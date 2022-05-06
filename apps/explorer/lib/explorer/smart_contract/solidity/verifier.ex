@@ -150,16 +150,14 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       solc_output,
       address_hash,
       constructor_arguments,
-      autodetect_constructor_arguments,
-      contract_source_code,
-      name
+      autodetect_constructor_arguments
     )
   end
 
-  defp compare_bytecodes({:error, :name}, _, _, _, _, _), do: {:error, :name}
-  defp compare_bytecodes({:error, _}, _, _, _, _, _), do: {:error, :compilation}
+  defp compare_bytecodes({:error, :name}, _, _, _,), do: {:error, :name}
+  defp compare_bytecodes({:error, _}, _, _, _,), do: {:error, :compilation}
 
-  defp compare_bytecodes({:error, _, error_message}, _, _, _, _, _) do
+  defp compare_bytecodes({:error, _, error_message}, _, _, _,) do
     {:error, :compilation, error_message}
   end
 
@@ -167,27 +165,21 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
          %{"abi" => abi, "bytecode" => bytecode, "deployedBytecode" => deployed_bytecode},
          address_hash,
          arguments_data,
-         autodetect_constructor_arguments,
-         contract_source_code,
-         contract_name
+         autodetect_constructor_arguments
        ),
        do:
          compare_bytecodes(
            {:ok, %{"abi" => abi, "bytecode" => bytecode, "deployedBytecode" => deployed_bytecode}},
            address_hash,
            arguments_data,
-           autodetect_constructor_arguments,
-           contract_source_code,
-           contract_name
+           autodetect_constructor_arguments
          )
 
   defp compare_bytecodes(
          {:ok, %{"abi" => abi, "bytecode" => bytecode, "deployedBytecode" => deployed_bytecode}},
          address_hash,
          arguments_data,
-         autodetect_constructor_arguments,
-         _contract_source_code,
-         _contract_name
+         autodetect_constructor_arguments
        ) do
     {local_meta, local_meta_length} = extract_meta_from_deployed_bytecode(deployed_bytecode)
 
@@ -222,6 +214,10 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
 
     bc_replaced_local =
       String.replace(blockchain_created_tx_input_without_meta, local_bytecode_without_meta, "", global: false)
+    
+    check_func = parse_constructor_and_return_check_func(abi)
+    has_constructor_with_params? = has_constructor_with_params?(abi)
+    empty_constructor_arguments = arguments_data == "" or arguments_data == nil
 
     cond do
       solc_local != solc_bc ->
@@ -230,11 +226,42 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       !String.contains?(blockchain_created_tx_input_without_meta, local_bytecode_without_meta) ->
         {:error, :generated_bytecode}
 
-      bc_replaced_local == "" ->
+      bc_replaced_local == "" && !has_constructor_with_params? ->
         {:ok, %{abi: abi}}
+      
+      bc_replaced_local != "" && has_constructor_with_params? && check_func(bc_replaced_local) && autodetect_constructor_arguments ->
+        {:ok, %{abi: abi, constructor_arguments: bc_replaced_local}}
 
+      has_constructor_with_params? && autodetect_constructor_arguments && (bc_replaced_local != "" && !check_func(bc_replaced_local) || bc_replaced_local == "") ->
+        {:error, :autodetect_constructor_arguments_failed}
+      
+      has_constructor_with_params? && empty_constructor_arguments ->
+          {:error, :constructor_arguments}
+
+      # to be continued ->
+      
       true ->
         {:ok, %{abi: abi, constructor_arguments: bc_replaced_local}}
+    end
+  end
+
+  defp parse_constructor_and_return_check_func(abi) do
+    constructor_abi = Enum.find(abi, fn el -> el["type"] == "constructor" && el["inputs"] != [] end)
+
+    input_types = Enum.map(constructor_abi["inputs"], &FunctionSelector.parse_specification_type/1)
+
+    fn assumed_arguments ->
+      try do
+        _ =
+          assumed_arguments
+          |> Base.decode16!(case: :mixed)
+          |> TypeDecoder.decode_raw(input_types)
+
+        assumed_arguments
+      rescue
+        _ ->
+          false
+      end
     end
   end
 
