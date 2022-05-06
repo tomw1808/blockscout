@@ -403,7 +403,7 @@ defmodule Explorer.Chain.SmartContract do
   defp error_message(:json), do: "Invalid JSON file."
   defp error_message(_), do: "There was an error validating your contract, please try again."
   defp error_message(:compilation, error_message), do: "There was an error compiling your contract: #{error_message}"
-  
+
   defp select_error_field(:compiler_version), do: :compiler_version
   defp select_error_field(:constructor_arguments), do: :constructor_arguments
   defp select_error_field(:name), do: :name
@@ -424,7 +424,10 @@ defmodule Explorer.Chain.SmartContract do
     |> Changeset.put_change(:autodetect_constructor_args, true)
   end
 
-  def merge_twin_vyper_contract_with_changeset(%__MODULE__{is_vyper_contract: true} = twin_contract, %Changeset{} = _changeset) do
+  def merge_twin_vyper_contract_with_changeset(
+        %__MODULE__{is_vyper_contract: true} = twin_contract,
+        %Changeset{} = _changeset
+      ) do
     changeset(twin_contract, %{})
   end
 
