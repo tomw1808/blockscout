@@ -12,6 +12,7 @@ defmodule Explorer.Chain.SmartContract do
 
   use Explorer.Schema
 
+  alias Ecto.Changeset
   alias Explorer.Chain.{Address, ContractMethod, DecompiledSmartContract, Hash}
   alias Explorer.Chain.SmartContract.ExternalLibrary
   alias Explorer.Repo
@@ -379,7 +380,7 @@ defmodule Explorer.Chain.SmartContract do
     end
   end
 
-  defp upsert_contract_methods(%Ecto.Changeset{changes: %{abi: abi}} = changeset) do
+  defp upsert_contract_methods(%Changeset{changes: %{abi: abi}} = changeset) do
     ContractMethod.upsert_from_abi(abi, get_field(changeset, :address_hash))
 
     changeset
@@ -408,33 +409,33 @@ defmodule Explorer.Chain.SmartContract do
   defp select_error_field(:name), do: :name
   defp select_error_field(_), do: :contract_source_code
 
-  def merge_twin_contract_with_changeset(%__MODULE__{} = twin_contract, %Ecto.Changeset{} = _changeset) do
+  def merge_twin_contract_with_changeset(%__MODULE__{} = twin_contract, %Changeset{} = _changeset) do
     changeset(twin_contract, %{})
   end
 
-  def merge_twin_contract_with_changeset(nil, %Ecto.Changeset{} = changeset) do
+  def merge_twin_contract_with_changeset(nil, %Changeset{} = changeset) do
     changeset
-    |> Ecto.Changeset.put_change(:name, "")
-    |> Ecto.Changeset.put_change(:optimization_runs, "200")
-    |> Ecto.Changeset.put_change(:optimization, true)
-    |> Ecto.Changeset.put_change(:evm_version, "default")
-    |> Ecto.Changeset.put_change(:compiler_version, "latest")
-    |> Ecto.Changeset.put_change(:contract_source_code, "")
-    |> Ecto.Changeset.put_change(:autodetect_constructor_args, true)
+    |> Changeset.put_change(:name, "")
+    |> Changeset.put_change(:optimization_runs, "200")
+    |> Changeset.put_change(:optimization, true)
+    |> Changeset.put_change(:evm_version, "default")
+    |> Changeset.put_change(:compiler_version, "latest")
+    |> Changeset.put_change(:contract_source_code, "")
+    |> Changeset.put_change(:autodetect_constructor_args, true)
   end
 
-  def merge_twin_vyper_contract_with_changeset(%__MODULE__{is_vyper_contract: true} = twin_contract, %Ecto.Changeset{} = _changeset) do
+  def merge_twin_vyper_contract_with_changeset(%__MODULE__{is_vyper_contract: true} = twin_contract, %Changeset{} = _changeset) do
     changeset(twin_contract, %{})
   end
 
-  def merge_twin_vyper_contract_with_changeset(%__MODULE__{is_vyper_contract: false}, %Ecto.Changeset{} = changeset) do
+  def merge_twin_vyper_contract_with_changeset(%__MODULE__{is_vyper_contract: false}, %Changeset{} = changeset) do
     merge_twin_vyper_contract_with_changeset(nil, changeset)
   end
 
-  def merge_twin_vyper_contract_with_changeset(nil, %Ecto.Changeset{} = changeset) do
+  def merge_twin_vyper_contract_with_changeset(nil, %Changeset{} = changeset) do
     changeset
-    |> Ecto.Changeset.put_change(:name, "Vyper_contract")
-    |> Ecto.Changeset.put_change(:compiler_version, "latest")
-    |> Ecto.Changeset.put_change(:contract_source_code, "")
+    |> Changeset.put_change(:name, "Vyper_contract")
+    |> Changeset.put_change(:compiler_version, "latest")
+    |> Changeset.put_change(:contract_source_code, "")
   end
 end
