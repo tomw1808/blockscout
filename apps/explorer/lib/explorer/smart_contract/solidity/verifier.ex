@@ -184,8 +184,8 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
   defp compare_bytecodes(
          {:ok, %{"abi" => abi, "bytecode" => bytecode, "deployedBytecode" => deployed_bytecode}},
          address_hash,
-         _arguments_data,
-         _autodetect_constructor_arguments,
+         arguments_data,
+         autodetect_constructor_arguments,
          _contract_source_code,
          _contract_name
        ) do

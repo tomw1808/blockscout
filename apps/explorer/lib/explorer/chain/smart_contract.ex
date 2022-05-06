@@ -200,6 +200,7 @@ defmodule Explorer.Chain.SmartContract do
   * `bytecode_checked_at` - timestamp of the last check of contract's bytecode matching (DB and BlockChain)
   * `contract_code_md5` - md5(`t:Explorer.Chain.Address.t/0` `contract_code`)
   * `implementation_name` - name of the proxy implementation
+  * `autodetect_constructor_args` - field was added for storing user's choice
   """
 
   @type t :: %Explorer.Chain.SmartContract{
@@ -218,7 +219,8 @@ defmodule Explorer.Chain.SmartContract do
           is_changed_bytecode: boolean,
           bytecode_checked_at: DateTime.t(),
           contract_code_md5: String.t(),
-          implementation_name: String.t() | nil
+          implementation_name: String.t() | nil,
+          autodetect_constructor_args: boolean | nil
         }
 
   schema "smart_contracts" do
@@ -239,6 +241,7 @@ defmodule Explorer.Chain.SmartContract do
     field(:bytecode_checked_at, :utc_datetime_usec, default: DateTime.add(DateTime.utc_now(), -86400, :second))
     field(:contract_code_md5, :string)
     field(:implementation_name, :string)
+    field(:autodetect_constructor_args, :boolean, virtual: true)
 
     has_many(
       :decompiled_smart_contracts,
@@ -320,14 +323,15 @@ defmodule Explorer.Chain.SmartContract do
         :is_changed_bytecode,
         :bytecode_checked_at,
         :contract_code_md5,
-        :implementation_name
+        :implementation_name,
+        :autodetect_constructor_args
       ])
       |> (&if(json_verification,
             do: &1,
             else: validate_required(&1, [:name, :compiler_version, :optimization, :address_hash, :contract_code_md5])
           )).()
 
-    field_to_put_message = if json_verification, do: :file, else: :contract_source_code
+    field_to_put_message = if json_verification, do: :file, else: select_error_field(error)
 
     if error_message do
       add_error(validated, field_to_put_message, error_message(error, error_message))
@@ -398,4 +402,39 @@ defmodule Explorer.Chain.SmartContract do
   defp error_message(:json), do: "Invalid JSON file."
   defp error_message(_), do: "There was an error validating your contract, please try again."
   defp error_message(:compilation, error_message), do: "There was an error compiling your contract: #{error_message}"
+  
+  defp select_error_field(:compiler_version), do: :compiler_version
+  defp select_error_field(:constructor_arguments), do: :constructor_arguments
+  defp select_error_field(:name), do: :name
+  defp select_error_field(_), do: :contract_source_code
+
+  def merge_twin_contract_with_changeset(%__MODULE__{} = twin_contract, %Ecto.Changeset{} = _changeset) do
+    changeset(twin_contract, %{})
+  end
+
+  def merge_twin_contract_with_changeset(nil, %Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.put_change(:name, "")
+    |> Ecto.Changeset.put_change(:optimization_runs, "200")
+    |> Ecto.Changeset.put_change(:optimization, true)
+    |> Ecto.Changeset.put_change(:evm_version, "default")
+    |> Ecto.Changeset.put_change(:compiler_version, "latest")
+    |> Ecto.Changeset.put_change(:contract_source_code, "")
+    |> Ecto.Changeset.put_change(:autodetect_constructor_args, true)
+  end
+
+  def merge_twin_vyper_contract_with_changeset(%__MODULE__{is_vyper_contract: true} = twin_contract, %Ecto.Changeset{} = _changeset) do
+    changeset(twin_contract, %{})
+  end
+
+  def merge_twin_vyper_contract_with_changeset(%__MODULE__{is_vyper_contract: false}, %Ecto.Changeset{} = changeset) do
+    merge_twin_vyper_contract_with_changeset(nil, changeset)
+  end
+
+  def merge_twin_vyper_contract_with_changeset(nil, %Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.put_change(:name, "Vyper_contract")
+    |> Ecto.Changeset.put_change(:compiler_version, "latest")
+    |> Ecto.Changeset.put_change(:contract_source_code, "")
+  end
 end
