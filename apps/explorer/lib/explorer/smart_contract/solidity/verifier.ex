@@ -171,11 +171,15 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
          arguments_data,
          autodetect_constructor_arguments
        ) do
-    %{"metadata_hash_with_length" => local_meta, "bytecode" => local_bytecode_without_meta, "compiler_version" => solc_local} = extract_bytecode_and_metadata_hash(bytecode, deployed_bytecode)  
+    %{
+      "metadata_hash_with_length" => local_meta,
+      "bytecode" => local_bytecode_without_meta,
+      "compiler_version" => solc_local
+    } = extract_bytecode_and_metadata_hash(bytecode, deployed_bytecode)
 
     bc_deployed_bytecode = Chain.smart_contract_bytecode(address_hash)
 
-    bc_creation_tx_input = 
+    bc_creation_tx_input =
       case Chain.smart_contract_creation_tx_bytecode(address_hash) do
         %{init: init, created_contract_code: _created_contract_code} ->
           "0x" <> init_without_0x = init
@@ -185,11 +189,15 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
           ""
       end
 
-    %{"metadata_hash_with_length" => bc_meta, "bytecode" => bc_creation_tx_input_without_meta, "compiler_version" => solc_bc} = extract_bytecode_and_metadata_hash(bc_creation_tx_input, bc_deployed_bytecode)  
+    %{
+      "metadata_hash_with_length" => bc_meta,
+      "bytecode" => bc_creation_tx_input_without_meta,
+      "compiler_version" => solc_bc
+    } = extract_bytecode_and_metadata_hash(bc_creation_tx_input, bc_deployed_bytecode)
 
     bc_replaced_local =
       String.replace(bc_creation_tx_input_without_meta, local_bytecode_without_meta, "", global: false)
-    
+
     is_constructor_args_valid? = parse_constructor_and_return_check_function(abi)
     has_constructor_with_params? = has_constructor_with_params?(abi)
     empty_constructor_arguments = arguments_data == "" or arguments_data == nil
@@ -206,17 +214,22 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
 
       bc_replaced_local == "" && !has_constructor_with_params? ->
         {:ok, %{abi: abi}}
-      
-      bc_replaced_local != "" && has_constructor_with_params? && is_constructor_args_valid?.(bc_replaced_local) && autodetect_constructor_arguments ->
+
+      bc_replaced_local != "" && has_constructor_with_params? && is_constructor_args_valid?.(bc_replaced_local) &&
+          autodetect_constructor_arguments ->
         {:ok, %{abi: abi, constructor_arguments: bc_replaced_local}}
 
-      has_constructor_with_params? && autodetect_constructor_arguments && (bc_replaced_local != "" && !is_constructor_args_valid?.(bc_replaced_local) || bc_replaced_local == "") ->
+      has_constructor_with_params? && autodetect_constructor_arguments &&
+          ((bc_replaced_local != "" && !is_constructor_args_valid?.(bc_replaced_local)) || bc_replaced_local == "") ->
         {:error, :autodetect_constructor_arguments_failed}
-      
-      has_constructor_with_params? && (empty_constructor_arguments || !String.contains?(bc_creation_tx_input, arguments_data)) ->
+
+      has_constructor_with_params? &&
+          (empty_constructor_arguments || !String.contains?(bc_creation_tx_input, arguments_data)) ->
         {:error, :constructor_arguments}
 
-      has_constructor_with_params? && is_constructor_args_valid?.(arguments_data) && (bc_replaced_local == arguments_data || check_users_constructor_args_validity(bc_creation_tx_input, bytecode, bc_meta, local_meta, arguments_data)) ->
+      has_constructor_with_params? && is_constructor_args_valid?.(arguments_data) &&
+          (bc_replaced_local == arguments_data ||
+             check_users_constructor_args_validity(bc_creation_tx_input, bytecode, bc_meta, local_meta, arguments_data)) ->
         {:ok, %{abi: abi, constructor_arguments: arguments_data}}
 
       try_library_verification(local_bytecode_without_meta, bc_creation_tx_input_without_meta) ->
@@ -229,8 +242,8 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
 
   defp check_users_constructor_args_validity(bc_bytecode, local_bytecode, bc_splitter, local_splitter, user_arguments) do
     clear_bc_bytecode = bc_bytecode |> replace_last_occurence(user_arguments) |> replace_last_occurence(bc_splitter)
-    clear_local_bytecode = replace_last_occurence(local_bytecode, local_splitter) 
-    clear_bc_bytecode == clear_local_bytecode 
+    clear_local_bytecode = replace_last_occurence(local_bytecode, local_splitter)
+    clear_bc_bytecode == clear_local_bytecode
   end
 
   defp replace_last_occurence(where, what) when is_binary(where) and is_binary(what) do
@@ -317,7 +330,11 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       bytecode
       |> replace_last_occurence(meta <> meta_length)
 
-    %{"metadata_hash_with_length" => meta <> meta_length, "trimmed_bytecode" => bytecode_without_meta, "compiler_version" => solc}
+    %{
+      "metadata_hash_with_length" => meta <> meta_length,
+      "trimmed_bytecode" => bytecode_without_meta,
+      "compiler_version" => solc
+    }
   end
 
   def previous_evm_versions(current_evm_version) do

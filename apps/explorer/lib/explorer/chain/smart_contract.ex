@@ -401,15 +401,24 @@ defmodule Explorer.Chain.SmartContract do
   defp error_message(:constructor_arguments), do: "Constructor arguments do not match, please try again."
   defp error_message(:name), do: "Wrong contract name, please try again."
   defp error_message(:json), do: "Invalid JSON file."
-  defp error_message(:autodetect_constructor_arguments_failed), do: "Autodetection of constructor arguments failed. Please try to input constructor arguments manually."
-  defp error_message(:no_creation_data), do: "The contract creation transaction has not been indexed yet. Please wait a few minutes and try again."
+
+  defp error_message(:autodetect_constructor_arguments_failed),
+    do: "Autodetection of constructor arguments failed. Please try to input constructor arguments manually."
+
+  defp error_message(:no_creation_data),
+    do: "The contract creation transaction has not been indexed yet. Please wait a few minutes and try again."
+
   defp error_message(:unknown_error), do: "Unable to verify: unknown error."
   defp error_message(_), do: "There was an error validating your contract, please try again."
   defp error_message(:compilation, error_message), do: "There was an error compiling your contract: #{error_message}"
 
   defp select_error_field(:no_creation_data), do: :address_hash
   defp select_error_field(:compiler_version), do: :compiler_version
-  defp select_error_field(constructor_arguments) when constructor_arguments in [:constructor_arguments, :autodetect_constructor_arguments_failed], do: :constructor_arguments
+
+  defp select_error_field(constructor_arguments)
+       when constructor_arguments in [:constructor_arguments, :autodetect_constructor_arguments_failed],
+       do: :constructor_arguments
+
   defp select_error_field(:name), do: :name
   defp select_error_field(_), do: :contract_source_code
 
