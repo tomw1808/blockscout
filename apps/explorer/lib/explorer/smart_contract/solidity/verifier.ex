@@ -198,8 +198,8 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
     bc_replaced_local =
       String.replace(bc_creation_tx_input_without_meta, local_bytecode_without_meta, "", global: false)
 
-    is_constructor_args_valid? = parse_constructor_and_return_check_function(abi)
     has_constructor_with_params? = has_constructor_with_params?(abi)
+    is_constructor_args_valid? = if has_constructor_with_params?, do: parse_constructor_and_return_check_function(abi), else: fn _ -> false end
     empty_constructor_arguments = arguments_data == "" or arguments_data == nil
 
     cond do
