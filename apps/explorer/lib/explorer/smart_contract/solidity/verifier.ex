@@ -173,7 +173,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
        ) do
     %{
       "metadata_hash_with_length" => local_meta,
-      "bytecode" => local_bytecode_without_meta,
+      "trimmed_bytecode" => local_bytecode_without_meta,
       "compiler_version" => solc_local
     } = extract_bytecode_and_metadata_hash(bytecode, deployed_bytecode)
 
@@ -191,7 +191,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
 
     %{
       "metadata_hash_with_length" => bc_meta,
-      "bytecode" => bc_creation_tx_input_without_meta,
+      "trimmed_bytecode" => bc_creation_tx_input_without_meta,
       "compiler_version" => solc_bc
     } = extract_bytecode_and_metadata_hash(bc_creation_tx_input, bc_deployed_bytecode)
 
