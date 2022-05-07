@@ -8,9 +8,9 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
   then Verified.
   """
 
+  alias ABI.{FunctionSelector, TypeDecoder}
   alias Explorer.Chain
   alias Explorer.SmartContract.Solidity.CodeCompiler
-  alias Explorer.SmartContract.Verifier.ConstructorArguments
 
   def evaluate_authenticity(_, %{"name" => ""}), do: {:error, :name}
 
@@ -75,9 +75,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
                      candidate,
                      address_hash,
                      constructor_arguments,
-                     autodetect_constructor_arguments,
-                     source_code,
-                     contract_name
+                     autodetect_constructor_arguments
                    ) do
                 {:ok, verified_data} ->
                   secondary_sources =
@@ -146,10 +144,10 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
     )
   end
 
-  defp compare_bytecodes({:error, :name}, _, _, _,), do: {:error, :name}
-  defp compare_bytecodes({:error, _}, _, _, _,), do: {:error, :compilation}
+  defp compare_bytecodes({:error, :name}, _, _, _), do: {:error, :name}
+  defp compare_bytecodes({:error, _}, _, _, _), do: {:error, :compilation}
 
-  defp compare_bytecodes({:error, _, error_message}, _, _, _,) do
+  defp compare_bytecodes({:error, _, error_message}, _, _, _) do
     {:error, :compilation, error_message}
   end
 
@@ -209,16 +207,16 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       bc_replaced_local == "" && !has_constructor_with_params? ->
         {:ok, %{abi: abi}}
       
-      bc_replaced_local != "" && has_constructor_with_params? && is_constructor_args_valid?(bc_replaced_local) && autodetect_constructor_arguments ->
+      bc_replaced_local != "" && has_constructor_with_params? && is_constructor_args_valid?.(bc_replaced_local) && autodetect_constructor_arguments ->
         {:ok, %{abi: abi, constructor_arguments: bc_replaced_local}}
 
-      has_constructor_with_params? && autodetect_constructor_arguments && (bc_replaced_local != "" && !is_constructor_args_valid?(bc_replaced_local) || bc_replaced_local == "") ->
+      has_constructor_with_params? && autodetect_constructor_arguments && (bc_replaced_local != "" && !is_constructor_args_valid?.(bc_replaced_local) || bc_replaced_local == "") ->
         {:error, :autodetect_constructor_arguments_failed}
       
       has_constructor_with_params? && (empty_constructor_arguments || !String.contains?(bc_creation_tx_input, arguments_data)) ->
         {:error, :constructor_arguments}
 
-      has_constructor_with_params? && is_constructor_args_valid?(arguments_data) && (bc_replaced_local == arguments_data || check_users_constructor_args_validity(bc_creation_tx_input, bytecode, bc_meta, local_meta, arguments_data)) ->
+      has_constructor_with_params? && is_constructor_args_valid?.(arguments_data) && (bc_replaced_local == arguments_data || check_users_constructor_args_validity(bc_creation_tx_input, bytecode, bc_meta, local_meta, arguments_data)) ->
         {:ok, %{abi: abi, constructor_arguments: arguments_data}}
 
       try_library_verification(local_bytecode_without_meta, bc_creation_tx_input_without_meta) ->
@@ -319,7 +317,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       bytecode
       |> replace_last_occurence(meta <> meta_length)
 
-    %{"metadata_hash_with_length" => meta <> meta_length, "trimmed_bytecode" => bytecode_without_meta, "compiler_version" => solc_local}
+    %{"metadata_hash_with_length" => meta <> meta_length, "trimmed_bytecode" => bytecode_without_meta, "compiler_version" => solc}
   end
 
   def previous_evm_versions(current_evm_version) do
