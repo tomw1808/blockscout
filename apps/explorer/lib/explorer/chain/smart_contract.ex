@@ -409,6 +409,7 @@ defmodule Explorer.Chain.SmartContract do
     do: "The contract creation transaction has not been indexed yet. Please wait a few minutes and try again."
 
   defp error_message(:unknown_error), do: "Unable to verify: unknown error."
+  defp error_message(:deployed_bytecode), do: "Deployed bytecode does not correspond to contract creation code."
   defp error_message(_), do: "There was an error validating your contract, please try again."
   defp error_message(:compilation, error_message), do: "There was an error compiling your contract: #{error_message}"
 
