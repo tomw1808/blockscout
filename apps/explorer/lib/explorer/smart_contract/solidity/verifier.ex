@@ -206,11 +206,11 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
     empty_constructor_arguments = arguments_data == "" or arguments_data == nil
 
     cond do
-      !String.contains?(bc_creation_tx_input, bc_meta) -> 
-        {:error, :deployed_bytecode}
-
       bc_creation_tx_input == "" ->
         {:error, :no_creation_data}
+
+      !String.contains?(bc_creation_tx_input, bc_meta) -> 
+        {:error, :deployed_bytecode}
 
       solc_local != solc_bc ->
         {:error, :compiler_version}

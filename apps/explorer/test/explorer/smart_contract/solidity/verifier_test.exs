@@ -318,7 +318,7 @@ defmodule Explorer.SmartContract.Solidity.VerifierTest do
       contract_address = insert(:contract_address, contract_code: contract_code_info.bytecode)
 
       :transaction
-      |> insert(created_contract_address_hash: contract_address.hash)
+      |> insert(created_contract_address_hash: contract_address.hash, input: contract_code_info.tx_input)
       |> with_block(status: :ok)
 
       different_code = "pragma solidity ^0.4.24; contract SimpleStorage {}"
