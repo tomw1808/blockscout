@@ -102,31 +102,30 @@ defmodule Explorer.SmartContract.Solidity.PublisherTest do
     end
 
     test "creates a smart contract with constructor arguments" do
-      contract_code_info = Factory.contract_code_info_modern_compilator()
+      contract_code_info = Factory.contract_code_info_with_constructor_arguments()
 
       contract_address = insert(:contract_address, contract_code: contract_code_info.bytecode)
-
-      constructor_arguments = "0102030405"
 
       params = %{
         "contract_source_code" => contract_code_info.source_code,
         "compiler_version" => contract_code_info.version,
         "name" => contract_code_info.name,
         "optimization" => contract_code_info.optimized,
-        "constructor_arguments" => constructor_arguments
+        "optimization_runs" => contract_code_info.optimization_runs,
+        "constructor_arguments" => contract_code_info.constructor_args
       }
 
       :transaction
       |> insert(
         created_contract_address_hash: contract_address.hash,
-        input: contract_code_info.tx_input <> constructor_arguments
+        input: contract_code_info.tx_input
       )
       |> with_block(status: :ok)
 
       response = Publisher.publish(contract_address.hash, params)
       assert {:ok, %SmartContract{} = smart_contract} = response
 
-      assert smart_contract.constructor_arguments == constructor_arguments
+      assert smart_contract.constructor_arguments == contract_code_info.constructor_args
     end
 
     test "with invalid data returns error changeset" do
