@@ -209,7 +209,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       bc_creation_tx_input == "" ->
         {:error, :no_creation_data}
 
-      !String.contains?(bc_creation_tx_input, bc_meta) -> 
+      !String.contains?(bc_creation_tx_input, bc_meta) ->
         {:error, :deployed_bytecode}
 
       solc_local != solc_bc ->

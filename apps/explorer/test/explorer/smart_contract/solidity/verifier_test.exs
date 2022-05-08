@@ -310,6 +310,7 @@ defmodule Explorer.SmartContract.Solidity.VerifierTest do
         "optimization" => false,
         "constructor_arguments" => wrong_constructor_arguments
       }
+
       assert {:error, :constructor_arguments} = Verifier.evaluate_authenticity(contract_address_1.hash, params_1)
     end
 
