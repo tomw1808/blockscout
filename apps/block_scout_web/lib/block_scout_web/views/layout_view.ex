@@ -44,6 +44,10 @@ defmodule BlockScoutWeb.LayoutView do
     Keyword.get(application_config(), :logo_footer) || Keyword.get(application_config(), :logo)
   end
 
+  def hide_footer do
+    Keyword.get(application_config(), :hide_footer)
+  end
+
   def logo_text do
     Keyword.get(application_config(), :logo_text) || nil
   end
