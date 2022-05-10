@@ -12,6 +12,10 @@ defmodule BlockScoutWeb.ChainView do
     Decimal.new(0)
   end
 
+  def show_dashboard_graph do
+    System.get_env("SHOW_DASHBOARD_GRAPH", "true") == "true"
+  end
+
   defp market_cap(:standard, %{available_supply: available_supply, usd_value: usd_value}) do
     Decimal.mult(available_supply, usd_value)
   end
